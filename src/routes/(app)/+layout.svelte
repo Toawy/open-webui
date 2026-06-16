@@ -11,7 +11,7 @@
 
 	import { getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
-	import { getActiveClientScripts } from '$lib/apis/client-scripts';
+	import { getActiveClientScripts, getActiveGlobalClientScripts } from '$lib/apis/client-scripts';
 	import { clientScripts } from '$lib/stores';
 	import { getBanners } from '$lib/apis/configs';
 	import { getTerminalServers } from '$lib/apis/terminal';
@@ -209,7 +209,19 @@
 		if ((window as any).__owuiClientScriptsLoaded) return;
 		(window as any).__owuiClientScriptsLoaded = true;
 
-		const scripts = (await getActiveClientScripts(localStorage.token)) ?? [];
+		// The user's own enabled scripts + admin-pushed global scripts.
+		const [own, global] = await Promise.all([
+			getActiveClientScripts(localStorage.token),
+			getActiveGlobalClientScripts(localStorage.token)
+		]);
+
+		// Dedupe by id (an admin's own global script appears in both lists).
+		const byId = new Map();
+		for (const script of [...(global ?? []), ...(own ?? [])]) {
+			byId.set(script.id, script);
+		}
+		const scripts = [...byId.values()];
+
 		clientScripts.set(scripts);
 		for (const script of scripts) {
 			runClientScript(script);

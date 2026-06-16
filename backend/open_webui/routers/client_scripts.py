@@ -15,7 +15,7 @@ from open_webui.models.client_scripts import (
     ClientScriptModel,
     ClientScripts,
 )
-from open_webui.utils.auth import get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -52,6 +52,40 @@ async def get_active_client_scripts(
 ):
     """The current user's enabled scripts (fetched by the frontend loader)."""
     return await ClientScripts.get_client_scripts_by_user_id(user.id, active_only=True, db=db)
+
+
+############################
+# Global scripts (admin-managed, run for everyone)
+############################
+
+
+@router.get('/global/active', response_model=list[ClientScriptModel])
+async def get_active_global_client_scripts(
+    user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
+    """Enabled global scripts — every user's loader fetches these and runs them."""
+    return await ClientScripts.get_active_global_client_scripts(db=db)
+
+
+@router.get('/global', response_model=list[ClientScriptModel])
+async def get_global_client_scripts(
+    user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+):
+    """All global scripts, for the admin management view."""
+    return await ClientScripts.get_global_client_scripts(db=db)
+
+
+@router.post('/id/{id}/toggle/global', response_model=ClientScriptModel | None)
+async def toggle_client_script_global_by_id(
+    id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+):
+    """Admin-only: mark a script global (runs for all users) or revoke it."""
+    script = await ClientScripts.get_client_script_by_id(id, db=db)
+    if not script:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Client script not found')
+    return await ClientScripts.update_client_script_by_id(
+        id, {'is_global': not script.is_global}, db=db
+    )
 
 
 ############################

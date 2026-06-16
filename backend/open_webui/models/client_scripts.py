@@ -123,6 +123,24 @@ class ClientScriptsTable:
             result = await db.execute(stmt)
             return [ClientScriptModel.model_validate(s) for s in result.scalars().all()]
 
+    async def get_active_global_client_scripts(self, db: AsyncSession | None = None) -> list[ClientScriptModel]:
+        """Active scripts an admin has marked global — these run for every user."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(ClientScript)
+                .filter_by(is_active=True, is_global=True)
+                .order_by(ClientScript.updated_at.desc())
+            )
+            return [ClientScriptModel.model_validate(s) for s in result.scalars().all()]
+
+    async def get_global_client_scripts(self, db: AsyncSession | None = None) -> list[ClientScriptModel]:
+        """All global scripts (for the admin management view)."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(ClientScript).filter_by(is_global=True).order_by(ClientScript.updated_at.desc())
+            )
+            return [ClientScriptModel.model_validate(s) for s in result.scalars().all()]
+
     async def get_client_script_by_id(self, id: str, db: AsyncSession | None = None) -> ClientScriptModel | None:
         try:
             async with get_async_db_context(db) as db:
