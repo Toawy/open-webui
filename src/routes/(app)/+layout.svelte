@@ -11,6 +11,8 @@
 
 	import { getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
+	import { getActiveClientScripts } from '$lib/apis/client-scripts';
+	import { clientScripts } from '$lib/stores';
 	import { getBanners } from '$lib/apis/configs';
 	import { getTerminalServers } from '$lib/apis/terminal';
 	import { getUserSettings } from '$lib/apis/users';
@@ -192,6 +194,28 @@
 		tools.set(toolsData);
 	};
 
+	// Client Scripts: user-authored JavaScript that runs in this browser only.
+	const runClientScript = (script: any) => {
+		try {
+			// Run in a fresh function scope (no access to app module internals).
+			new Function(script?.content ?? '')();
+		} catch (e) {
+			console.error(`[client-script] "${script?.name ?? script?.id}" failed:`, e);
+		}
+	};
+
+	const setClientScripts = async () => {
+		// Guard against re-running on remounts within the same page load.
+		if ((window as any).__owuiClientScriptsLoaded) return;
+		(window as any).__owuiClientScriptsLoaded = true;
+
+		const scripts = (await getActiveClientScripts(localStorage.token)) ?? [];
+		clientScripts.set(scripts);
+		for (const script of scripts) {
+			runClientScript(script);
+		}
+	};
+
 	onMount(async () => {
 		if ($user === undefined || $user === null) {
 			await goto('/auth');
@@ -206,6 +230,7 @@
 			checkLocalDBChats(),
 			setBanners().catch((e) => console.error('Failed to load banners:', e)),
 			setTools().catch((e) => console.error('Failed to load tools:', e)),
+			setClientScripts().catch((e) => console.error('Failed to load client scripts:', e)),
 			setUserSettings(async () => {
 				await Promise.all([
 					setModels().catch((e) => console.error('Failed to load models:', e)),
