@@ -148,15 +148,13 @@
 						{#if $user}
 							<a
 								draggable="false"
-								aria-current={$page.url.pathname.includes('/workspace/client-scripts')
-									? 'page'
-									: null}
-								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/client-scripts')
+								aria-current={$page.url.pathname.includes('/workspace/scripts') ? 'page' : null}
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/scripts')
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-								href="/workspace/client-scripts"
+								href="/workspace/scripts"
 							>
-								{$i18n.t('Client Scripts')}
+								{$i18n.t('Scripts')}
 							</a>
 						{/if}
 					</div>
